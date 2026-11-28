@@ -30,8 +30,14 @@ def load_prices() -> pd.DataFrame:
         if not p.exists():
             continue
         d = pd.read_csv(p, parse_dates=["Date"]).set_index("Date").sort_index()
+        # DROP WEEKENDS (5=Sat, 6=Sun) to prevent yfinance ghost bars
+        d = d[~d.index.dayofweek.isin([5, 6])] 
         frames[sym] = d["Close"]
-    return pd.concat(frames, axis=1).sort_index()
+    
+    prices = pd.concat(frames, axis=1).sort_index()
+    # Also drop any rows that are completely empty across all instruments
+    prices = prices.dropna(how='all')
+    return prices
 
 def lots_for(sym: str, notional_usd: float, price: float) -> float:
     meta = INSTRUMENTS[sym]
